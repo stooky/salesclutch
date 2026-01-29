@@ -1,0 +1,42 @@
+instruction_sets:
+  # Sandler Submarine Steps
+  - id: bonding_rapport
+    name: "Bonding & Rapport"
+    description: "Building trust and connection (Sandler Step 1)"
+    instruction_file: "instructions/bonding_rapport.md"
+
+  - id: upfront_contract
+    name: "Up-Front Contract"
+    description: "Setting expectations and agenda (Sandler Step 2)"
+    instruction_file: "instructions/upfront_contract.md"
+
+  - id: pain
+    name: "Pain Discovery"
+    description: "Uncovering pain points and challenges (Sandler Step 3)"
+    instruction_file: "instructions/pain.md"
+
+  - id: budget
+    name: "Budget Discussion"
+    description: "Understanding budget and investment capacity (Sandler Step 4)"
+    instruction_file: "instructions/budget.md"
+
+  - id: decision
+    name: "Decision Process"
+    description: "Identifying decision makers and timeline (Sandler Step 5)"
+    instruction_file: "instructions/decision.md"
+
+  - id: fulfillment
+    name: "Fulfillment/Presentation"
+    description: "Presenting solution tied to pain (Sandler Step 6)"
+    instruction_file: "instructions/fulfillment.md"
+
+  - id: post_sell
+    name: "Post-Sell"
+    description: "Reinforcing decision and preventing buyer's remorse (Sandler Step 7)"
+    instruction_file: "instructions/post_sell.md"
+
+  # Combined/Full Call Analysis
+  - id: full_sandler
+    name: "Full Sandler Analysis"
+    description: "Analyze call against all Sandler principles"
+    instruction_file: "instructions/full_sandler.md"

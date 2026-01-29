@@ -1,0 +1,16 @@
+[Unit]
+Description=SalesClutch Call Analyzer
+After=network.target
+
+[Service]
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/salesclutch
+Environment="PATH=/opt/salesclutch/venv/bin"
+EnvironmentFile=/opt/salesclutch/.env
+ExecStart=/opt/salesclutch/venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000
+Restart=always
+RestartSec=3
+
+[Install]
+WantedBy=multi-user.target

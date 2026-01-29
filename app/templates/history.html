@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Call History - SalesClutch{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold">Call History</h1>
+        <a href="/" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+            + New Analysis
+        </a>
+    </div>
+
+    {% if calls %}
+    <div class="space-y-4">
+        {% for call in calls %}
+        <a href="/call/{{ call.id }}" class="block bg-gray-800 rounded-lg p-6 hover:bg-gray-700/50 transition border border-transparent hover:border-emerald-500/30">
+            <div class="flex justify-between items-start mb-3">
+                <div>
+                    <h3 class="font-semibold text-lg">{{ call.filename }}</h3>
+                    <span class="text-sm text-gray-400">
+                        {{ call.created_at.strftime('%B %d, %Y at %I:%M %p') if call.created_at else 'Unknown' }}
+                    </span>
+                </div>
+                <span class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-full text-sm">
+                    {{ call.instruction_name }}
+                </span>
+            </div>
+            <p class="text-gray-400 text-sm line-clamp-2">{{ call.summary[:200] }}{% if call.summary|length > 200 %}...{% endif %}</p>
+            <div class="mt-3 flex items-center text-emerald-400 text-sm">
+                <span>Next: {{ call.next_step[:50] }}{% if call.next_step|length > 50 %}...{% endif %}</span>
+                <svg class="w-4 h-4 ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                </svg>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="bg-gray-800 rounded-lg p-12 text-center">
+        <svg class="w-16 h-16 mx-auto mb-4 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path>
+        </svg>
+        <h3 class="text-xl font-semibold text-gray-400 mb-2">No calls analyzed yet</h3>
+        <p class="text-gray-500 mb-6">Upload your first call transcript to get started</p>
+        <a href="/" class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-6 rounded-lg transition inline-block">
+            Upload Call
+        </a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}Call Analysis - SalesClutch{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="flex justify-between items-start mb-8">
+        <div>
+            <h1 class="text-3xl font-bold">Call Analysis</h1>
+            <p class="text-gray-400 mt-1">{{ call.filename }}</p>
+        </div>
+        <span class="bg-emerald-600/20 text-emerald-400 px-3 py-1 rounded-full text-sm">
+            {{ instruction_name }}
+        </span>
+    </div>
+
+    <!-- Next Step / Determination Banner -->
+    <div class="bg-gradient-to-r from-emerald-600/20 to-blue-600/20 border border-emerald-500/30 rounded-lg p-6 mb-8">
+        <h2 class="text-lg font-semibold text-emerald-400 mb-2">Recommended Next Step</h2>
+        <p class="text-xl font-medium">{{ call.next_step }}</p>
+    </div>
+
+    <!-- Summary -->
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h2 class="text-lg font-semibold text-emerald-400 mb-4">Summary</h2>
+        <p class="text-gray-300 whitespace-pre-line">{{ call.summary }}</p>
+    </div>
+
+    <!-- Action Items -->
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h2 class="text-lg font-semibold text-emerald-400 mb-4">Action Items</h2>
+        {% if action_items %}
+        <ul class="space-y-3">
+            {% for item in action_items %}
+            <li class="flex items-start gap-3">
+                <span class="text-emerald-500 mt-1">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                    </svg>
+                </span>
+                <span class="text-gray-300">{{ item }}</span>
+            </li>
+            {% endfor %}
+        </ul>
+        {% else %}
+        <p class="text-gray-400">No action items identified.</p>
+        {% endif %}
+    </div>
+
+    <!-- Determination -->
+    <div class="bg-gray-800 rounded-lg p-6 mb-6">
+        <h2 class="text-lg font-semibold text-emerald-400 mb-4">Deal Assessment</h2>
+        <p class="text-gray-300 whitespace-pre-line">{{ call.determination }}</p>
+    </div>
+
+    <!-- Transcript (Collapsible) -->
+    <details class="bg-gray-800 rounded-lg mb-6">
+        <summary class="p-6 cursor-pointer hover:bg-gray-700/50 transition">
+            <span class="text-lg font-semibold text-emerald-400">View Full Transcript</span>
+        </summary>
+        <div class="px-6 pb-6">
+            <pre class="text-gray-400 text-sm whitespace-pre-wrap font-mono bg-gray-900 p-4 rounded-lg max-h-96 overflow-y-auto">{{ call.transcript }}</pre>
+        </div>
+    </details>
+
+    <!-- Actions -->
+    <div class="flex gap-4">
+        <a href="/" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white text-center font-semibold py-3 px-6 rounded-lg transition">
+            Analyze Another Call
+        </a>
+        <a href="/history" class="flex-1 bg-gray-700 hover:bg-gray-600 text-white text-center font-semibold py-3 px-6 rounded-lg transition">
+            View History
+        </a>
+    </div>
+
+    <p class="text-gray-500 text-sm text-center mt-6">
+        Analyzed on {{ call.created_at.strftime('%B %d, %Y at %I:%M %p') if call.created_at else 'Unknown' }}
+    </p>
+</div>
+{% endblock %}
