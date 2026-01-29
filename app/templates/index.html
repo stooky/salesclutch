@@ -8,6 +8,21 @@
     <p class="text-gray-400 mb-8">Upload a call transcript or audio file for Sandler analysis</p>
 
     <form action="/upload" method="post" enctype="multipart/form-data" class="space-y-6">
+        <input type="hidden" name="workspace_id" value="{{ workspace.id }}">
+
+        <!-- Optional: Link to existing deal -->
+        <div>
+            <label class="block text-sm font-medium mb-2">Link to Deal (Optional)</label>
+            <select name="deal_id" class="w-full bg-gray-800 border border-gray-600 rounded-lg px-4 py-3 focus:border-emerald-500 focus:outline-none">
+                <option value="">No deal - standalone call</option>
+                {% if deals %}
+                {% for deal in deals %}
+                <option value="{{ deal.id }}">{{ deal.name }}{% if deal.company %} ({{ deal.company }}){% endif %}</option>
+                {% endfor %}
+                {% endif %}
+            </select>
+        </div>
+
         <!-- File Upload -->
         <div>
             <label class="block text-sm font-medium mb-2">Call Recording or Transcript</label>

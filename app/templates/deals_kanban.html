@@ -1,0 +1,756 @@
+{% extends "base.html" %}
+
+{% block title %}Deals - SalesClutch{% endblock %}
+
+{% block content %}
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h1 class="text-3xl font-bold">Deals Pipeline</h1>
+        <p class="text-gray-400">Drag deals between stages to update their status</p>
+    </div>
+    <button onclick="openNewDealModal()"
+            class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center space-x-2">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+        </svg>
+        <span>New Deal</span>
+    </button>
+</div>
+
+<!-- Kanban Board -->
+<div class="flex space-x-4 overflow-x-auto pb-4">
+    {% for stage_value, stage_deals in stages.items() %}
+    <div class="flex-shrink-0 w-72">
+        <div class="bg-gray-800 rounded-lg">
+            <div class="p-3 border-b border-gray-700 flex justify-between items-center">
+                <h3 class="font-semibold text-sm {% if stage_value == 'closed_won' %}text-emerald-400{% elif stage_value == 'closed_lost' %}text-red-400{% endif %}">
+                    {{ stage_names[stage_value] }}
+                </h3>
+                <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">
+                    {{ stage_deals|length }}
+                </span>
+            </div>
+            <div class="kanban-column p-2 space-y-2"
+                 data-stage="{{ stage_value }}"
+                 ondragover="handleDragOver(event)"
+                 ondragleave="handleDragLeave(event)"
+                 ondrop="handleDrop(event)">
+                {% for deal in stage_deals %}
+                <div class="deal-card bg-gray-700 rounded-lg p-3 border border-gray-600 hover:border-emerald-500 transition"
+                     draggable="true"
+                     data-deal-id="{{ deal.id }}"
+                     data-deal-name="{{ deal.name }}"
+                     data-deal-stage="{{ deal.stage }}"
+                     ondragstart="handleDragStart(event)"
+                     ondragend="handleDragEnd(event)"
+                     onclick="window.location.href='/deal/{{ deal.id }}'">
+                    <h4 class="font-medium text-white mb-1">{{ deal.name }}</h4>
+                    {% if deal.company %}
+                    <p class="text-sm text-gray-400">{{ deal.company }}</p>
+                    {% endif %}
+                    {% if deal.value %}
+                    <p class="text-emerald-400 font-semibold mt-2">${{ "{:,.0f}".format(deal.value) }}</p>
+                    {% endif %}
+                    {% if deal.calls %}
+                    <div class="mt-2 flex items-center text-xs text-gray-500">
+                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                        </svg>
+                        {{ deal.calls|length }} call{% if deal.calls|length != 1 %}s{% endif %}
+                    </div>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- New Deal Modal -->
+<div id="new-deal-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-gray-700">
+        <h2 class="text-xl font-bold mb-4">Create New Deal</h2>
+        <form id="new-deal-form" class="space-y-4">
+            <div>
+                <label class="block text-sm font-medium mb-1">Deal Name *</label>
+                <input type="text" name="name" required
+                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Company</label>
+                <input type="text" name="company"
+                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-sm font-medium mb-1">Contact Name</label>
+                    <input type="text" name="contact_name"
+                           class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-medium mb-1">Contact Email</label>
+                    <input type="email" name="contact_email"
+                           class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Deal Value ($)</label>
+                <input type="number" name="value" step="0.01" min="0"
+                       class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium mb-1">Notes</label>
+                <textarea name="notes" rows="3"
+                          class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none"></textarea>
+            </div>
+            <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeNewDealModal()"
+                        class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Create Deal
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Stage Gate Modal - Prompts for call upload when advancing stages -->
+<div id="stage-gate-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50 overflow-y-auto">
+    <div class="bg-gray-800 rounded-xl p-6 max-w-lg w-full mx-4 my-8 border border-gray-700">
+        <h2 class="text-xl font-bold mb-2">Advance Deal Stage</h2>
+        <p class="text-gray-400 mb-4">
+            Moving <span id="gate-deal-name" class="text-emerald-400 font-semibold"></span>
+            from <span id="gate-from-stage" class="text-white"></span>
+            to <span id="gate-to-stage" class="text-white"></span>
+        </p>
+
+        <!-- Skipped Stages Warning -->
+        <div id="skipped-stages-section" class="hidden mb-4">
+            <div class="bg-orange-900/30 border border-orange-600 rounded-lg p-4">
+                <div class="flex items-start mb-3">
+                    <svg class="w-5 h-5 text-orange-400 mr-2 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <div>
+                        <h3 class="font-semibold text-orange-400">Skipping Stages</h3>
+                        <p class="text-sm text-orange-200/80">You're skipping one or more stages. Please provide an explanation for each skipped stage.</p>
+                    </div>
+                </div>
+                <div id="skipped-stages-list" class="space-y-3">
+                    <!-- Dynamically populated -->
+                </div>
+            </div>
+        </div>
+
+        <div id="normal-advance-section" class="bg-gray-700 rounded-lg p-4 mb-4">
+            <p class="text-sm text-gray-300">
+                <svg class="w-5 h-5 inline mr-1 text-yellow-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                To advance this deal, upload a qualifying call or provide justification.
+            </p>
+        </div>
+
+        <form id="stage-gate-form" class="space-y-4">
+            <input type="hidden" id="gate-deal-id" name="deal_id">
+            <input type="hidden" id="gate-new-stage" name="new_stage">
+            <input type="hidden" id="gate-from-stage-value" name="from_stage">
+
+            <!-- Option 1: Upload a call -->
+            <div class="border border-gray-600 rounded-lg p-4">
+                <label class="flex items-center mb-3">
+                    <input type="radio" name="gate_option" value="upload" class="mr-2" checked>
+                    <span class="font-medium">Upload qualifying call</span>
+                </label>
+                <div id="upload-section">
+                    <input type="file" id="gate-file" name="file"
+                           accept=".txt,.md,.mp3,.wav,.m4a,.webm,.mp4,.mpeg,.mpga,.oga,.ogg"
+                           class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none text-sm">
+                    <select id="gate-instruction-set" name="instruction_set"
+                            class="w-full mt-2 bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none text-sm">
+                        {% for inst in instruction_sets %}
+                        <option value="{{ inst.id }}">{{ inst.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Option 2: Manual justification -->
+            <div class="border border-gray-600 rounded-lg p-4">
+                <label class="flex items-center mb-3">
+                    <input type="radio" name="gate_option" value="manual" class="mr-2">
+                    <span class="font-medium">Provide manual justification</span>
+                </label>
+                <div id="manual-section" class="hidden">
+                    <textarea id="gate-justification" name="justification" rows="3"
+                              placeholder="Explain why this deal is ready to advance..."
+                              class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none text-sm"></textarea>
+                </div>
+            </div>
+
+            <!-- Progress Indicator (hidden by default) -->
+            <div id="upload-progress" class="hidden">
+                <div class="bg-gray-700 rounded-lg p-4 mb-4">
+                    <div class="flex items-center space-x-3 mb-3">
+                        <svg class="animate-spin h-5 w-5 text-emerald-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        <span id="progress-status" class="text-emerald-400 font-medium">Uploading file...</span>
+                    </div>
+                    <div class="w-full bg-gray-600 rounded-full h-2">
+                        <div id="progress-bar" class="bg-emerald-500 h-2 rounded-full transition-all duration-500" style="width: 0%"></div>
+                    </div>
+                    <p id="progress-detail" class="text-xs text-gray-400 mt-2">Preparing upload...</p>
+                </div>
+            </div>
+
+            <div id="form-buttons" class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeStageGateModal()" id="cancel-btn"
+                        class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="submit" id="gate-submit-btn"
+                        class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    <span class="ready">Advance Deal</span>
+                    <span class="loading hidden">
+                        <svg class="animate-spin h-5 w-5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </span>
+                </button>
+            </div>
+        </form>
+
+        <!-- Result Message (hidden by default) -->
+        <div id="result-message" class="hidden mt-4">
+            <!-- Will be populated dynamically -->
+        </div>
+    </div>
+</div>
+
+<script>
+const workspaceId = {{ workspace.id }};
+
+// Stage order for determining if advancing
+const stageOrder = ['lead', 'discovery', 'demo', 'negotiation', 'proposal', 'closed_won', 'closed_lost'];
+
+// Stage display names
+const stageNames = {
+    'lead': 'Lead',
+    'discovery': 'Discovery',
+    'demo': 'Demo',
+    'negotiation': 'Negotiation',
+    'proposal': 'Proposal',
+    'closed_won': 'Closed Won',
+    'closed_lost': 'Closed Lost'
+};
+
+let pendingDrop = null;
+
+// Drag and Drop
+function handleDragStart(e) {
+    e.target.classList.add('dragging');
+    e.dataTransfer.setData('text/plain', e.target.dataset.dealId);
+    e.dataTransfer.setData('deal-name', e.target.dataset.dealName);
+    e.dataTransfer.setData('deal-stage', e.target.dataset.dealStage);
+    e.dataTransfer.effectAllowed = 'move';
+}
+
+function handleDragEnd(e) {
+    e.target.classList.remove('dragging');
+    document.querySelectorAll('.kanban-column').forEach(col => {
+        col.classList.remove('drag-over');
+    });
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    e.currentTarget.classList.add('drag-over');
+}
+
+function handleDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+}
+
+function isAdvancing(fromStage, toStage) {
+    // Moving to closed_lost is never "advancing"
+    if (toStage === 'closed_lost') return false;
+
+    const fromIndex = stageOrder.indexOf(fromStage);
+    const toIndex = stageOrder.indexOf(toStage);
+    return toIndex > fromIndex;
+}
+
+async function handleDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+
+    const dealId = e.dataTransfer.getData('text/plain');
+    const dealName = e.dataTransfer.getData('deal-name');
+    const fromStage = e.dataTransfer.getData('deal-stage');
+    const toStage = e.currentTarget.dataset.stage;
+
+    // Same stage, no action needed
+    if (fromStage === toStage) return;
+
+    // Check if advancing (not going backwards or to closed_lost)
+    if (isAdvancing(fromStage, toStage)) {
+        // Show stage gate modal
+        openStageGateModal(dealId, dealName, fromStage, toStage);
+    } else {
+        // Moving backwards or to closed_lost - allow direct move with simple confirmation
+        if (toStage === 'closed_lost') {
+            const reason = prompt('Why is this deal being marked as lost?');
+            if (reason === null) return; // Cancelled
+            await updateDealStage(dealId, toStage, reason);
+        } else {
+            await updateDealStage(dealId, toStage, `Moved back from ${stageNames[fromStage]} to ${stageNames[toStage]}`);
+        }
+    }
+}
+
+async function updateDealStage(dealId, newStage, justification, triggerCallId = null) {
+    try {
+        const response = await fetch(`/api/deals/${dealId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                stage: newStage,
+                justification: justification,
+                trigger_call_id: triggerCallId
+            })
+        });
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to update deal stage');
+        }
+    } catch (err) {
+        console.error('Error updating deal:', err);
+        alert('Failed to update deal stage');
+    }
+}
+
+// Get stages being skipped
+function getSkippedStages(fromStage, toStage) {
+    const fromIndex = stageOrder.indexOf(fromStage);
+    const toIndex = stageOrder.indexOf(toStage);
+
+    if (toIndex <= fromIndex + 1) return []; // Not skipping any stages
+
+    // Get stages between from and to (exclusive)
+    const skipped = [];
+    for (let i = fromIndex + 1; i < toIndex; i++) {
+        // Don't include closed stages as skippable
+        if (stageOrder[i] !== 'closed_won' && stageOrder[i] !== 'closed_lost') {
+            skipped.push(stageOrder[i]);
+        }
+    }
+    return skipped;
+}
+
+// Stage Gate Modal
+function openStageGateModal(dealId, dealName, fromStage, toStage) {
+    document.getElementById('gate-deal-id').value = dealId;
+    document.getElementById('gate-new-stage').value = toStage;
+    document.getElementById('gate-from-stage-value').value = fromStage;
+    document.getElementById('gate-deal-name').textContent = dealName;
+    document.getElementById('gate-from-stage').textContent = stageNames[fromStage];
+    document.getElementById('gate-to-stage').textContent = stageNames[toStage];
+
+    // Check for skipped stages
+    const skippedStages = getSkippedStages(fromStage, toStage);
+    const skippedSection = document.getElementById('skipped-stages-section');
+    const skippedList = document.getElementById('skipped-stages-list');
+    const normalSection = document.getElementById('normal-advance-section');
+
+    if (skippedStages.length > 0) {
+        // Show skipped stages warning
+        skippedSection.classList.remove('hidden');
+        normalSection.classList.add('hidden');
+
+        // Build skipped stages list
+        skippedList.innerHTML = skippedStages.map(stage => `
+            <div class="bg-gray-800 rounded p-3">
+                <div class="flex items-center justify-between mb-2">
+                    <span class="font-medium text-white">${stageNames[stage]}</span>
+                    <span class="text-xs text-orange-400">Skipped</span>
+                </div>
+                <textarea
+                    class="skip-explanation w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-sm focus:border-orange-500 focus:outline-none"
+                    data-stage="${stage}"
+                    placeholder="Why is ${stageNames[stage]} being skipped?"
+                    rows="2"
+                    required></textarea>
+            </div>
+        `).join('');
+
+        // Update button text
+        document.getElementById('gate-submit-btn').querySelector('.ready').textContent = 'Override & Advance';
+    } else {
+        skippedSection.classList.add('hidden');
+        normalSection.classList.remove('hidden');
+        skippedList.innerHTML = '';
+        document.getElementById('gate-submit-btn').querySelector('.ready').textContent = 'Advance Deal';
+    }
+
+    document.getElementById('stage-gate-modal').classList.remove('hidden');
+    document.getElementById('stage-gate-modal').classList.add('flex');
+}
+
+function closeStageGateModal() {
+    document.getElementById('stage-gate-modal').classList.add('hidden');
+    document.getElementById('stage-gate-modal').classList.remove('flex');
+    document.getElementById('stage-gate-form').reset();
+    document.getElementById('upload-section').classList.remove('hidden');
+    document.getElementById('manual-section').classList.add('hidden');
+    document.getElementById('skipped-stages-section').classList.add('hidden');
+    document.getElementById('normal-advance-section').classList.remove('hidden');
+    document.getElementById('skipped-stages-list').innerHTML = '';
+    // Reset progress and result states
+    document.getElementById('upload-progress').classList.add('hidden');
+    document.getElementById('result-message').classList.add('hidden');
+    document.getElementById('form-buttons').classList.remove('hidden');
+    // Reset submit button state
+    const submitBtn = document.getElementById('gate-submit-btn');
+    submitBtn.querySelector('.ready').classList.remove('hidden');
+    submitBtn.querySelector('.loading').classList.add('hidden');
+    submitBtn.disabled = false;
+}
+
+// Toggle between upload and manual options
+document.querySelectorAll('input[name="gate_option"]').forEach(radio => {
+    radio.addEventListener('change', function() {
+        if (this.value === 'upload') {
+            document.getElementById('upload-section').classList.remove('hidden');
+            document.getElementById('manual-section').classList.add('hidden');
+        } else {
+            document.getElementById('upload-section').classList.add('hidden');
+            document.getElementById('manual-section').classList.remove('hidden');
+        }
+    });
+});
+
+// Collect skipped stage explanations
+function getSkippedStageExplanations() {
+    const explanations = [];
+    document.querySelectorAll('.skip-explanation').forEach(textarea => {
+        const stage = textarea.dataset.stage;
+        const explanation = textarea.value.trim();
+        if (stage && explanation) {
+            explanations.push({ stage, explanation });
+        }
+    });
+    return explanations;
+}
+
+// Validate skipped stage explanations
+function validateSkippedExplanations() {
+    const textareas = document.querySelectorAll('.skip-explanation');
+    for (const textarea of textareas) {
+        if (!textarea.value.trim()) {
+            textarea.focus();
+            alert(`Please provide an explanation for why ${stageNames[textarea.dataset.stage]} is being skipped.`);
+            return false;
+        }
+    }
+    return true;
+}
+
+// Updated updateDealStage to support skipped stages
+async function updateDealStageWithSkips(dealId, newStage, justification, skippedStages = [], triggerCallId = null) {
+    try {
+        const response = await fetch(`/api/deals/${dealId}`, {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                stage: newStage,
+                justification: justification,
+                trigger_call_id: triggerCallId,
+                skipped_stages: skippedStages.length > 0 ? skippedStages : null
+            })
+        });
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            alert('Failed to update deal stage');
+        }
+    } catch (err) {
+        console.error('Error updating deal:', err);
+        alert('Failed to update deal stage');
+    }
+}
+
+// Progress indicator functions
+function showProgress() {
+    document.getElementById('upload-progress').classList.remove('hidden');
+    document.getElementById('form-buttons').classList.add('hidden');
+    document.getElementById('result-message').classList.add('hidden');
+    // Reset progress
+    updateProgress(0, 'Preparing upload...', 'Getting ready to process your file');
+}
+
+function hideProgress() {
+    document.getElementById('upload-progress').classList.add('hidden');
+    document.getElementById('form-buttons').classList.remove('hidden');
+}
+
+function updateProgress(percent, status, detail) {
+    document.getElementById('progress-bar').style.width = percent + '%';
+    document.getElementById('progress-status').textContent = status;
+    document.getElementById('progress-detail').textContent = detail;
+}
+
+function showResult(success, title, message, callId, dealId) {
+    const resultDiv = document.getElementById('result-message');
+    resultDiv.classList.remove('hidden');
+    document.getElementById('upload-progress').classList.add('hidden');
+
+    if (success) {
+        resultDiv.innerHTML = `
+            <div class="bg-emerald-900/30 border border-emerald-600 rounded-lg p-4">
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-emerald-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-emerald-400">${title}</h3>
+                        <p class="text-sm text-emerald-200/80 mt-1">${message}</p>
+                        <div class="mt-3 flex space-x-3">
+                            <a href="/call/${callId}" class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded transition">View Call Analysis</a>
+                            <button onclick="window.location.reload()" class="text-sm bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition">Back to Deals</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    } else {
+        resultDiv.innerHTML = `
+            <div class="bg-yellow-900/30 border border-yellow-600 rounded-lg p-4">
+                <div class="flex items-start">
+                    <svg class="w-6 h-6 text-yellow-400 mr-3 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                    </svg>
+                    <div class="flex-1">
+                        <h3 class="font-semibold text-yellow-400">${title}</h3>
+                        <p class="text-sm text-yellow-200/80 mt-1">${message}</p>
+                        <div class="mt-3 flex space-x-3">
+                            <a href="/deal/${dealId}" class="text-sm bg-yellow-600 hover:bg-yellow-700 text-white px-3 py-1 rounded transition">View Deal Details</a>
+                            <a href="/call/${callId}" class="text-sm bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition">View Call Analysis</a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// Stage gate form submission
+document.getElementById('stage-gate-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const dealId = document.getElementById('gate-deal-id').value;
+    const newStage = document.getElementById('gate-new-stage').value;
+    const fromStage = document.getElementById('gate-from-stage-value').value;
+    const option = document.querySelector('input[name="gate_option"]:checked').value;
+
+    // Check for skipped stages and validate explanations
+    const skippedStages = getSkippedStages(fromStage, newStage);
+    if (skippedStages.length > 0) {
+        if (!validateSkippedExplanations()) {
+            return;
+        }
+    }
+
+    const skippedExplanations = getSkippedStageExplanations();
+
+    const submitBtn = document.getElementById('gate-submit-btn');
+    submitBtn.querySelector('.ready').classList.add('hidden');
+    submitBtn.querySelector('.loading').classList.remove('hidden');
+    submitBtn.disabled = true;
+
+    try {
+        if (option === 'upload') {
+            // Upload the file first, then update stage
+            const file = document.getElementById('gate-file').files[0];
+            if (!file) {
+                alert('Please select a file to upload');
+                submitBtn.querySelector('.ready').classList.remove('hidden');
+                submitBtn.querySelector('.loading').classList.add('hidden');
+                submitBtn.disabled = false;
+                return;
+            }
+
+            // Show progress indicator
+            showProgress();
+
+            // Determine if this is an audio file
+            const isAudio = /\.(mp3|wav|m4a|webm|mp4|mpeg|mpga|oga|ogg)$/i.test(file.name);
+
+            // Progress simulation with status updates
+            const progressSteps = isAudio ? [
+                { percent: 10, status: 'Uploading file...', detail: `Uploading ${file.name}`, delay: 500 },
+                { percent: 25, status: 'Transcribing audio...', detail: 'Converting audio to text using AI', delay: 2000 },
+                { percent: 50, status: 'Analyzing transcript...', detail: 'Processing with GPT-4', delay: 3000 },
+                { percent: 75, status: 'Checking advancement criteria...', detail: 'Evaluating deal qualification', delay: 1000 },
+                { percent: 90, status: 'Finalizing...', detail: 'Saving results', delay: 500 }
+            ] : [
+                { percent: 15, status: 'Uploading file...', detail: `Uploading ${file.name}`, delay: 300 },
+                { percent: 40, status: 'Analyzing transcript...', detail: 'Processing with GPT-4', delay: 2000 },
+                { percent: 70, status: 'Checking advancement criteria...', detail: 'Evaluating deal qualification', delay: 1000 },
+                { percent: 90, status: 'Finalizing...', detail: 'Saving results', delay: 500 }
+            ];
+
+            // Start progress animation
+            let currentStep = 0;
+            const progressInterval = setInterval(() => {
+                if (currentStep < progressSteps.length) {
+                    const step = progressSteps[currentStep];
+                    updateProgress(step.percent, step.status, step.detail);
+                    currentStep++;
+                }
+            }, 1500);
+
+            const formData = new FormData();
+            formData.append('file', file);
+            formData.append('workspace_id', workspaceId);
+            formData.append('deal_id', dealId);
+            formData.append('instruction_set', document.getElementById('gate-instruction-set').value);
+            formData.append('target_stage', newStage);
+
+            const uploadResponse = await fetch('/api/upload-and-analyze', {
+                method: 'POST',
+                body: formData
+            });
+
+            clearInterval(progressInterval);
+
+            if (uploadResponse.ok) {
+                const result = await uploadResponse.json();
+                updateProgress(100, 'Complete!', 'Analysis finished');
+
+                // Short delay to show completion
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                if (result.advanced) {
+                    // Deal was advanced
+                    showResult(
+                        true,
+                        'Deal Advanced!',
+                        `The deal has been moved from ${stageNames[fromStage]} to ${stageNames[newStage]} based on the call analysis.`,
+                        result.call_id,
+                        dealId
+                    );
+
+                    // If there were skipped stages, we need to record the overrides
+                    if (skippedExplanations.length > 0) {
+                        await updateDealStageWithSkips(dealId, newStage, 'Advanced via call upload with stage overrides', skippedExplanations, result.call_id);
+                    }
+                } else if (result.advancement_blocked) {
+                    // Deal was NOT advanced - show the reason
+                    showResult(
+                        false,
+                        'Deal Not Advanced',
+                        `The call analysis did not support advancing to ${stageNames[newStage]}. Reason: ${result.block_reason}. View the deal details for more information.`,
+                        result.call_id,
+                        dealId
+                    );
+                } else {
+                    // Call uploaded but no advancement check (shouldn't happen if target_stage was set)
+                    showResult(
+                        true,
+                        'Call Analyzed',
+                        'The call has been processed and linked to the deal.',
+                        result.call_id,
+                        dealId
+                    );
+                }
+            } else {
+                hideProgress();
+                throw new Error('Upload failed');
+            }
+        } else {
+            // Manual justification
+            const justification = document.getElementById('gate-justification').value;
+            if (!justification.trim()) {
+                alert('Please provide a justification');
+                submitBtn.querySelector('.ready').classList.remove('hidden');
+                submitBtn.querySelector('.loading').classList.add('hidden');
+                submitBtn.disabled = false;
+                return;
+            }
+            await updateDealStageWithSkips(dealId, newStage, justification, skippedExplanations);
+        }
+    } catch (err) {
+        console.error('Error:', err);
+        hideProgress();
+        alert('Failed to advance deal');
+        submitBtn.querySelector('.ready').classList.remove('hidden');
+        submitBtn.querySelector('.loading').classList.add('hidden');
+        submitBtn.disabled = false;
+    }
+});
+
+// New Deal Modal
+function openNewDealModal() {
+    document.getElementById('new-deal-modal').classList.remove('hidden');
+    document.getElementById('new-deal-modal').classList.add('flex');
+}
+
+function closeNewDealModal() {
+    document.getElementById('new-deal-modal').classList.add('hidden');
+    document.getElementById('new-deal-modal').classList.remove('flex');
+    document.getElementById('new-deal-form').reset();
+}
+
+// Close modals on outside click
+document.getElementById('new-deal-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeNewDealModal();
+});
+document.getElementById('stage-gate-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeStageGateModal();
+});
+
+// New deal form submission
+document.getElementById('new-deal-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const formData = new FormData(this);
+    const data = {
+        name: formData.get('name'),
+        company: formData.get('company') || null,
+        contact_name: formData.get('contact_name') || null,
+        contact_email: formData.get('contact_email') || null,
+        value: formData.get('value') ? parseFloat(formData.get('value')) : null,
+        notes: formData.get('notes') || null
+    };
+
+    try {
+        const response = await fetch(`/api/deals?workspace=${workspaceId}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(data)
+        });
+
+        if (response.ok) {
+            window.location.reload();
+        } else {
+            const error = await response.json();
+            alert(error.detail || 'Failed to create deal');
+        }
+    } catch (err) {
+        console.error('Error creating deal:', err);
+        alert('Failed to create deal');
+    }
+});
+</script>
+{% endblock %}

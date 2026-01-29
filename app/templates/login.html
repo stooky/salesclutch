@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - SalesClutch</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body class="bg-gray-900 text-gray-100 min-h-screen flex items-center justify-center">
+    <div class="max-w-md w-full mx-auto px-4">
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-emerald-400 mb-2">SalesClutch</h1>
+            <p class="text-gray-400">Sandler Selling System Call Analyzer</p>
+        </div>
+
+        <div class="bg-gray-800 rounded-xl p-8 shadow-xl border border-gray-700">
+            <h2 class="text-2xl font-semibold mb-6 text-center">Sign In</h2>
+
+            <div id="g_id_onload"
+                 data-client_id="{{ google_client_id }}"
+                 data-callback="handleCredentialResponse"
+                 data-auto_prompt="false">
+            </div>
+
+            <div class="flex justify-center">
+                <div class="g_id_signin"
+                     data-type="standard"
+                     data-size="large"
+                     data-theme="filled_black"
+                     data-text="sign_in_with"
+                     data-shape="rectangular"
+                     data-logo_alignment="left">
+                </div>
+            </div>
+
+            <p class="text-gray-500 text-sm text-center mt-6">
+                Sign in with your Google account to get started
+            </p>
+        </div>
+
+        <p class="text-gray-600 text-xs text-center mt-8">
+            By signing in, you agree to analyze your sales calls with AI
+        </p>
+    </div>
+
+    <script>
+    function handleCredentialResponse(response) {
+        fetch('/auth/google', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ credential: response.credential })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.status === 'ok') {
+                window.location.href = data.redirect;
+            } else {
+                alert('Login failed. Please try again.');
+            }
+        })
+        .catch(err => {
+            console.error('Login error:', err);
+            alert('Login failed. Please try again.');
+        });
+    }
+    </script>
+</body>
+</html>
