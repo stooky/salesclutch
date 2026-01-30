@@ -55,8 +55,8 @@
                     {% endif %}
                 </div>
                 <div class="flex items-center space-x-6">
-                    <a href="/" class="text-gray-300 hover:text-emerald-400 transition">Upload</a>
-                    <a href="/deals" class="text-gray-300 hover:text-emerald-400 transition">Deals</a>
+                    <a href="/deals" class="text-gray-300 hover:text-emerald-400 transition">Pipeline</a>
+                    <a href="/upload" class="text-gray-300 hover:text-emerald-400 transition">Upload</a>
                     <a href="/history" class="text-gray-300 hover:text-emerald-400 transition">History</a>
                     {% if user %}
                     <div class="flex items-center space-x-3">
@@ -91,7 +91,7 @@
     }
     </script>
 
-    <main class="max-w-6xl mx-auto px-4 py-8">
+    <main class="{% block main_class %}max-w-6xl mx-auto px-4 py-8{% endblock %}">
         {% block content %}{% endblock %}
     </main>
 

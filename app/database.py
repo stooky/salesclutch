@@ -34,5 +34,5 @@ def get_db():
 
 
 def init_db():
-    from app.models import User, Workspace, WorkspaceMember, WorkspaceInvite, Session, Deal, Call, DealStageChange, DealStageOverride
+    from app.models import User, Workspace, WorkspaceMember, WorkspaceInvite, Session, Deal, Call, DealStageChange, DealStageOverride, DealSendBack
     Base.metadata.create_all(bind=engine)

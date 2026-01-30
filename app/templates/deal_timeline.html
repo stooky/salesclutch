@@ -124,6 +124,13 @@
                     </svg>
                     Stages skipped
                 </span>
+                {% elif change.trigger_type == 'send_back' %}
+                <span class="inline-flex items-center mt-1 px-2 py-0.5 rounded text-xs font-medium bg-red-900 text-red-300">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                    Sent back
+                </span>
                 {% endif %}
                 {% if change.trigger_call_id %}
                 <a href="/call/{{ change.trigger_call_id }}" class="text-emerald-400 hover:text-emerald-300 text-xs ml-2">View call &rarr;</a>
@@ -166,6 +173,48 @@
                 <p class="text-sm text-gray-400">{{ override.explanation }}</p>
                 {% if override.user %}
                 <p class="text-xs text-gray-500 mt-1">Overridden by {{ override.user.name }}</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+<!-- Send it Back!!! -->
+{% if send_backs %}
+<div class="bg-gray-800 rounded-lg p-4 border border-red-900 mb-8">
+    <h3 class="font-semibold text-red-400 mb-4 flex items-center">
+        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 15l-3-3m0 0l3-3m-3 3h8M3 12a9 9 0 1118 0 9 9 0 01-18 0z"></path>
+        </svg>
+        Send it Back!!!
+        <span class="ml-2 text-xs font-normal text-gray-400">({{ send_backs|length }} time{% if send_backs|length != 1 %}s{% endif %} sent back)</span>
+    </h3>
+    <div class="space-y-3">
+        {% for send_back in send_backs %}
+        <div class="flex items-start space-x-3 p-3 bg-gray-700 rounded-lg border-l-4 border-red-500">
+            <div class="flex-shrink-0">
+                <div class="w-8 h-8 rounded-full bg-red-600 flex items-center justify-center">
+                    <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                    </svg>
+                </div>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center justify-between mb-1">
+                    <p class="text-sm font-medium text-white">
+                        <span class="text-gray-400">{{ stage_names.get(send_back.from_stage, send_back.from_stage) }}</span>
+                        <svg class="w-4 h-4 inline mx-1 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 17l-5-5m0 0l5-5m-5 5h12"></path>
+                        </svg>
+                        <span class="text-red-400">{{ stage_names.get(send_back.to_stage, send_back.to_stage) }}</span>
+                    </p>
+                    <span class="text-xs text-gray-500">{{ send_back.created_at.strftime('%b %d, %Y %I:%M %p') }}</span>
+                </div>
+                <p class="text-sm text-gray-400">{{ send_back.reason }}</p>
+                {% if send_back.user %}
+                <p class="text-xs text-gray-500 mt-1">Sent back by {{ send_back.user.name }}</p>
                 {% endif %}
             </div>
         </div>

@@ -1,12 +1,15 @@
 {% extends "base.html" %}
 
-{% block title %}Deals - SalesClutch{% endblock %}
+{% block title %}Pipeline - SalesClutch{% endblock %}
+
+{% block main_class %}px-4 py-4 h-[calc(100vh-130px)]{% endblock %}
 
 {% block content %}
-<div class="mb-6 flex justify-between items-center">
+<!-- Header -->
+<div class="flex justify-between items-center mb-4">
     <div>
-        <h1 class="text-3xl font-bold">Deals Pipeline</h1>
-        <p class="text-gray-400">Drag deals between stages to update their status</p>
+        <h1 class="text-2xl font-bold">Sales Pipeline</h1>
+        <p class="text-gray-400 text-sm">Drag deals to advance them through stages</p>
     </div>
     <button onclick="openNewDealModal()"
             class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center space-x-2">
@@ -17,55 +20,138 @@
     </button>
 </div>
 
-<!-- Kanban Board -->
-<div class="flex space-x-4 overflow-x-auto pb-4">
-    {% for stage_value, stage_deals in stages.items() %}
-    <div class="flex-shrink-0 w-72">
-        <div class="bg-gray-800 rounded-lg">
-            <div class="p-3 border-b border-gray-700 flex justify-between items-center">
-                <h3 class="font-semibold text-sm {% if stage_value == 'closed_won' %}text-emerald-400{% elif stage_value == 'closed_lost' %}text-red-400{% endif %}">
-                    {{ stage_names[stage_value] }}
-                </h3>
-                <span class="bg-gray-700 text-gray-300 text-xs px-2 py-1 rounded-full">
-                    {{ stage_deals|length }}
-                </span>
-            </div>
-            <div class="kanban-column p-2 space-y-2"
-                 data-stage="{{ stage_value }}"
-                 ondragover="handleDragOver(event)"
-                 ondragleave="handleDragLeave(event)"
-                 ondrop="handleDrop(event)">
-                {% for deal in stage_deals %}
-                <div class="deal-card bg-gray-700 rounded-lg p-3 border border-gray-600 hover:border-emerald-500 transition"
-                     draggable="true"
-                     data-deal-id="{{ deal.id }}"
-                     data-deal-name="{{ deal.name }}"
-                     data-deal-stage="{{ deal.stage }}"
-                     ondragstart="handleDragStart(event)"
-                     ondragend="handleDragEnd(event)"
-                     onclick="window.location.href='/deal/{{ deal.id }}'">
-                    <h4 class="font-medium text-white mb-1">{{ deal.name }}</h4>
-                    {% if deal.company %}
-                    <p class="text-sm text-gray-400">{{ deal.company }}</p>
-                    {% endif %}
-                    {% if deal.value %}
-                    <p class="text-emerald-400 font-semibold mt-2">${{ "{:,.0f}".format(deal.value) }}</p>
-                    {% endif %}
-                    {% if deal.calls %}
-                    <div class="mt-2 flex items-center text-xs text-gray-500">
-                        <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
-                        </svg>
-                        {{ deal.calls|length }} call{% if deal.calls|length != 1 %}s{% endif %}
+{% set total_deals = stages.values()|sum(start=[]) | length %}
+
+<!-- Empty State / Onboarding -->
+{% if total_deals == 0 %}
+<div class="flex items-center justify-center h-[calc(100%-80px)]">
+    <div class="text-center max-w-lg">
+        <div class="w-20 h-20 bg-emerald-600/20 rounded-full flex items-center justify-center mx-auto mb-6">
+            <svg class="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"></path>
+            </svg>
+        </div>
+        <h2 class="text-2xl font-bold mb-3">Welcome to SalesClutch!</h2>
+        <p class="text-gray-400 mb-6">Start tracking your sales pipeline with the Sandler Selling System. Create your first deal to get started.</p>
+
+        <div class="bg-gray-800 rounded-xl p-6 text-left mb-6">
+            <h3 class="font-semibold text-emerald-400 mb-4">How it works:</h3>
+            <div class="space-y-4">
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">1</div>
+                    <div>
+                        <p class="font-medium">Create a deal</p>
+                        <p class="text-sm text-gray-400">Add prospects and opportunities to your pipeline</p>
                     </div>
-                    {% endif %}
                 </div>
-                {% endfor %}
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">2</div>
+                    <div>
+                        <p class="font-medium">Upload call transcripts</p>
+                        <p class="text-sm text-gray-400">Upload recordings or text transcripts to analyze with AI</p>
+                    </div>
+                </div>
+                <div class="flex items-start space-x-3">
+                    <div class="w-6 h-6 bg-emerald-600 rounded-full flex items-center justify-center flex-shrink-0 text-sm font-bold">3</div>
+                    <div>
+                        <p class="font-medium">Advance through stages</p>
+                        <p class="text-sm text-gray-400">Drag deals to the next stage when qualified by call analysis</p>
+                    </div>
+                </div>
             </div>
+        </div>
+
+        <button onclick="openNewDealModal()"
+                class="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 px-6 rounded-lg transition inline-flex items-center space-x-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span>Create Your First Deal</span>
+        </button>
+    </div>
+</div>
+{% else %}
+
+<!-- Kanban Board - Responsive Grid -->
+<div class="grid grid-cols-7 gap-2 h-[calc(100%-60px)] min-h-0">
+    {% for stage_value, stage_deals in stages.items() %}
+    <div class="flex flex-col min-h-0 bg-gray-800 rounded-lg overflow-hidden">
+        <!-- Column Header -->
+        <div class="p-2 border-b border-gray-700 flex justify-between items-center flex-shrink-0">
+            <h3 class="font-semibold text-xs truncate {% if stage_value == 'closed_won' %}text-emerald-400{% elif stage_value == 'closed_lost' %}text-red-400{% else %}text-gray-300{% endif %}">
+                {{ stage_names[stage_value] }}
+            </h3>
+            <span class="bg-gray-700 text-gray-300 text-xs px-1.5 py-0.5 rounded-full ml-1 flex-shrink-0">
+                {{ stage_deals|length }}
+            </span>
+        </div>
+        <!-- Column Content - Scrollable -->
+        <div class="kanban-column flex-1 overflow-y-auto p-2 space-y-2"
+             data-stage="{{ stage_value }}"
+             ondragover="handleDragOver(event)"
+             ondragleave="handleDragLeave(event)"
+             ondrop="handleDrop(event)">
+            {% for deal in stage_deals %}
+            <div class="deal-card bg-gray-700 rounded-lg p-2 border border-gray-600 hover:border-emerald-500 transition cursor-pointer"
+                 draggable="true"
+                 data-deal-id="{{ deal.id }}"
+                 data-deal-name="{{ deal.name }}"
+                 data-deal-stage="{{ deal.stage }}"
+                 ondragstart="handleDragStart(event)"
+                 ondragend="handleDragEnd(event)"
+                 onclick="window.location.href='/deal/{{ deal.id }}'">
+                <h4 class="font-medium text-white text-sm leading-tight mb-1 truncate" title="{{ deal.name }}">{{ deal.name }}</h4>
+                {% if deal.company %}
+                <p class="text-xs text-gray-400 truncate" title="{{ deal.company }}">{{ deal.company }}</p>
+                {% endif %}
+                {% if deal.value %}
+                <p class="text-emerald-400 font-semibold text-sm mt-1">${{ "{:,.0f}".format(deal.value) }}</p>
+                {% endif %}
+                {% if deal.calls %}
+                <div class="mt-1 flex items-center text-xs text-gray-500">
+                    <svg class="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"></path>
+                    </svg>
+                    {{ deal.calls|length }}
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            <!-- Empty column hint -->
+            {% if stage_deals|length == 0 %}
+            <div class="text-center py-4 text-gray-500 text-xs">
+                <p>Drop deals here</p>
+            </div>
+            {% endif %}
         </div>
     </div>
     {% endfor %}
 </div>
+
+<!-- Quick Tips (shown once) -->
+{% if total_deals == 1 %}
+<div id="quick-tip" class="fixed bottom-4 right-4 bg-gray-800 border border-emerald-600 rounded-lg p-4 max-w-sm shadow-xl z-40">
+    <button onclick="document.getElementById('quick-tip').remove()" class="absolute top-2 right-2 text-gray-400 hover:text-white">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+    </button>
+    <div class="flex items-start space-x-3">
+        <div class="w-8 h-8 bg-emerald-600/20 rounded-full flex items-center justify-center flex-shrink-0">
+            <svg class="w-4 h-4 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+            </svg>
+        </div>
+        <div>
+            <p class="font-medium text-emerald-400 text-sm">Tip: Advance deals</p>
+            <p class="text-xs text-gray-400 mt-1">Click on a deal to upload call transcripts, or drag it to the next stage to be prompted for qualifying evidence.</p>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+{% endif %}
 
 <!-- New Deal Modal -->
 <div id="new-deal-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
@@ -74,34 +160,34 @@
         <form id="new-deal-form" class="space-y-4">
             <div>
                 <label class="block text-sm font-medium mb-1">Deal Name *</label>
-                <input type="text" name="name" required
+                <input type="text" name="name" required placeholder="e.g., Acme Corp - Enterprise License"
                        class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Company</label>
-                <input type="text" name="company"
+                <input type="text" name="company" placeholder="e.g., Acme Corporation"
                        class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
             </div>
             <div class="grid grid-cols-2 gap-4">
                 <div>
                     <label class="block text-sm font-medium mb-1">Contact Name</label>
-                    <input type="text" name="contact_name"
+                    <input type="text" name="contact_name" placeholder="John Smith"
                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
                 </div>
                 <div>
                     <label class="block text-sm font-medium mb-1">Contact Email</label>
-                    <input type="email" name="contact_email"
+                    <input type="email" name="contact_email" placeholder="john@acme.com"
                            class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
                 </div>
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Deal Value ($)</label>
-                <input type="number" name="value" step="0.01" min="0"
+                <input type="number" name="value" step="0.01" min="0" placeholder="50000"
                        class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none">
             </div>
             <div>
                 <label class="block text-sm font-medium mb-1">Notes</label>
-                <textarea name="notes" rows="3"
+                <textarea name="notes" rows="2" placeholder="Initial context about this opportunity..."
                           class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-emerald-500 focus:outline-none"></textarea>
             </div>
             <div class="flex space-x-3 pt-2">
@@ -234,6 +320,101 @@
     </div>
 </div>
 
+<!-- Send Back Modal - When moving deals backwards -->
+<div id="send-back-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-red-600">
+        <div class="flex items-center space-x-3 mb-4">
+            <div class="w-10 h-10 bg-red-600/20 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold text-red-400">Send it Back!!!</h2>
+                <p class="text-sm text-gray-400">Moving deal backwards in pipeline</p>
+            </div>
+        </div>
+
+        <div class="bg-red-900/20 border border-red-800 rounded-lg p-3 mb-4">
+            <p class="text-sm text-red-200">
+                <span id="sendback-deal-name" class="font-semibold text-white"></span> is being moved from
+                <span id="sendback-from-stage-display" class="font-semibold text-white"></span> back to
+                <span id="sendback-to-stage-display" class="font-semibold text-white"></span>
+            </p>
+        </div>
+
+        <form id="send-back-form" class="space-y-4">
+            <input type="hidden" id="sendback-deal-id">
+            <input type="hidden" id="sendback-new-stage">
+            <input type="hidden" id="sendback-from-stage">
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Why is this deal being sent back? *</label>
+                <textarea id="sendback-reason" rows="4" required
+                          placeholder="e.g., Prospect needs more discovery work, budget not confirmed, decision maker changed..."
+                          class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-red-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeSendBackModal()"
+                        class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 bg-red-600 hover:bg-red-700 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Send it Back
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Closed Lost Modal -->
+<div id="closed-lost-modal" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50">
+    <div class="bg-gray-800 rounded-xl p-6 max-w-md w-full mx-4 border border-gray-600">
+        <div class="flex items-center space-x-3 mb-4">
+            <div class="w-10 h-10 bg-gray-600/50 rounded-full flex items-center justify-center">
+                <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                </svg>
+            </div>
+            <div>
+                <h2 class="text-xl font-bold">Mark as Lost</h2>
+                <p class="text-sm text-gray-400">This deal will be moved to Closed Lost</p>
+            </div>
+        </div>
+
+        <div class="bg-gray-700 rounded-lg p-3 mb-4">
+            <p class="text-sm text-gray-300">
+                <span id="closedlost-deal-name" class="font-semibold text-white"></span> will be marked as lost.
+            </p>
+        </div>
+
+        <form id="closed-lost-form" class="space-y-4">
+            <input type="hidden" id="closedlost-deal-id">
+            <input type="hidden" id="closedlost-from-stage">
+
+            <div>
+                <label class="block text-sm font-medium mb-2">Why was this deal lost? *</label>
+                <textarea id="closedlost-reason" rows="4" required
+                          placeholder="e.g., Lost to competitor, budget cut, project cancelled, no decision made..."
+                          class="w-full bg-gray-700 border border-gray-600 rounded-lg px-3 py-2 focus:border-gray-500 focus:outline-none"></textarea>
+            </div>
+
+            <div class="flex space-x-3 pt-2">
+                <button type="button" onclick="closeClosedLostModal()"
+                        class="flex-1 bg-gray-600 hover:bg-gray-500 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex-1 bg-gray-500 hover:bg-gray-400 text-white font-semibold py-2 px-4 rounded-lg transition">
+                    Mark as Lost
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const workspaceId = {{ workspace.id }};
 
@@ -288,6 +469,15 @@ function isAdvancing(fromStage, toStage) {
     return toIndex > fromIndex;
 }
 
+function isSendingBack(fromStage, toStage) {
+    // Moving to closed_lost is not a "send back"
+    if (toStage === 'closed_lost') return false;
+
+    const fromIndex = stageOrder.indexOf(fromStage);
+    const toIndex = stageOrder.indexOf(toStage);
+    return toIndex < fromIndex;
+}
+
 async function handleDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
@@ -304,28 +494,30 @@ async function handleDrop(e) {
     if (isAdvancing(fromStage, toStage)) {
         // Show stage gate modal
         openStageGateModal(dealId, dealName, fromStage, toStage);
-    } else {
-        // Moving backwards or to closed_lost - allow direct move with simple confirmation
-        if (toStage === 'closed_lost') {
-            const reason = prompt('Why is this deal being marked as lost?');
-            if (reason === null) return; // Cancelled
-            await updateDealStage(dealId, toStage, reason);
-        } else {
-            await updateDealStage(dealId, toStage, `Moved back from ${stageNames[fromStage]} to ${stageNames[toStage]}`);
-        }
+    } else if (isSendingBack(fromStage, toStage)) {
+        // Moving backwards - show send back modal
+        openSendBackModal(dealId, dealName, fromStage, toStage);
+    } else if (toStage === 'closed_lost') {
+        // Moving to closed_lost - show closed lost modal
+        openClosedLostModal(dealId, dealName, fromStage);
     }
 }
 
-async function updateDealStage(dealId, newStage, justification, triggerCallId = null) {
+async function updateDealStage(dealId, newStage, justification, triggerCallId = null, sendBackReason = null) {
     try {
+        const body = {
+            stage: newStage,
+            justification: justification,
+            trigger_call_id: triggerCallId
+        };
+        if (sendBackReason) {
+            body.send_back_reason = sendBackReason;
+        }
+
         const response = await fetch(`/api/deals/${dealId}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                stage: newStage,
-                justification: justification,
-                trigger_call_id: triggerCallId
-            })
+            body: JSON.stringify(body)
         });
 
         if (response.ok) {
@@ -337,6 +529,43 @@ async function updateDealStage(dealId, newStage, justification, triggerCallId = 
         console.error('Error updating deal:', err);
         alert('Failed to update deal stage');
     }
+}
+
+// Send Back Modal
+function openSendBackModal(dealId, dealName, fromStage, toStage) {
+    document.getElementById('sendback-deal-id').value = dealId;
+    document.getElementById('sendback-new-stage').value = toStage;
+    document.getElementById('sendback-from-stage').value = fromStage;
+    document.getElementById('sendback-deal-name').textContent = dealName;
+    document.getElementById('sendback-from-stage-display').textContent = stageNames[fromStage];
+    document.getElementById('sendback-to-stage-display').textContent = stageNames[toStage];
+
+    document.getElementById('send-back-modal').classList.remove('hidden');
+    document.getElementById('send-back-modal').classList.add('flex');
+    setTimeout(() => document.getElementById('sendback-reason').focus(), 100);
+}
+
+function closeSendBackModal() {
+    document.getElementById('send-back-modal').classList.add('hidden');
+    document.getElementById('send-back-modal').classList.remove('flex');
+    document.getElementById('send-back-form').reset();
+}
+
+// Closed Lost Modal
+function openClosedLostModal(dealId, dealName, fromStage) {
+    document.getElementById('closedlost-deal-id').value = dealId;
+    document.getElementById('closedlost-from-stage').value = fromStage;
+    document.getElementById('closedlost-deal-name').textContent = dealName;
+
+    document.getElementById('closed-lost-modal').classList.remove('hidden');
+    document.getElementById('closed-lost-modal').classList.add('flex');
+    setTimeout(() => document.getElementById('closedlost-reason').focus(), 100);
+}
+
+function closeClosedLostModal() {
+    document.getElementById('closed-lost-modal').classList.add('hidden');
+    document.getElementById('closed-lost-modal').classList.remove('flex');
+    document.getElementById('closed-lost-form').reset();
 }
 
 // Get stages being skipped
@@ -527,7 +756,7 @@ function showResult(success, title, message, callId, dealId) {
                         <p class="text-sm text-emerald-200/80 mt-1">${message}</p>
                         <div class="mt-3 flex space-x-3">
                             <a href="/call/${callId}" class="text-sm bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1 rounded transition">View Call Analysis</a>
-                            <button onclick="window.location.reload()" class="text-sm bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition">Back to Deals</button>
+                            <button onclick="window.location.reload()" class="text-sm bg-gray-600 hover:bg-gray-500 text-white px-3 py-1 rounded transition">Back to Pipeline</button>
                         </div>
                     </div>
                 </div>
@@ -704,6 +933,8 @@ document.getElementById('stage-gate-form').addEventListener('submit', async func
 function openNewDealModal() {
     document.getElementById('new-deal-modal').classList.remove('hidden');
     document.getElementById('new-deal-modal').classList.add('flex');
+    // Focus the first input
+    setTimeout(() => document.querySelector('#new-deal-form input[name="name"]').focus(), 100);
 }
 
 function closeNewDealModal() {
@@ -718,6 +949,12 @@ document.getElementById('new-deal-modal').addEventListener('click', function(e) 
 });
 document.getElementById('stage-gate-modal').addEventListener('click', function(e) {
     if (e.target === this) closeStageGateModal();
+});
+document.getElementById('send-back-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeSendBackModal();
+});
+document.getElementById('closed-lost-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeClosedLostModal();
 });
 
 // New deal form submission
@@ -751,6 +988,51 @@ document.getElementById('new-deal-form').addEventListener('submit', async functi
         console.error('Error creating deal:', err);
         alert('Failed to create deal');
     }
+});
+
+// Send Back form submission
+document.getElementById('send-back-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const dealId = document.getElementById('sendback-deal-id').value;
+    const newStage = document.getElementById('sendback-new-stage').value;
+    const fromStage = document.getElementById('sendback-from-stage').value;
+    const reason = document.getElementById('sendback-reason').value.trim();
+
+    if (!reason) {
+        alert('Please provide a reason for sending this deal back');
+        return;
+    }
+
+    await updateDealStage(
+        dealId,
+        newStage,
+        `Sent back from ${stageNames[fromStage]} to ${stageNames[newStage]}: ${reason}`,
+        null,
+        reason
+    );
+});
+
+// Closed Lost form submission
+document.getElementById('closed-lost-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const dealId = document.getElementById('closedlost-deal-id').value;
+    const fromStage = document.getElementById('closedlost-from-stage').value;
+    const reason = document.getElementById('closedlost-reason').value.trim();
+
+    if (!reason) {
+        alert('Please provide a reason for marking this deal as lost');
+        return;
+    }
+
+    await updateDealStage(
+        dealId,
+        'closed_lost',
+        `Marked as lost from ${stageNames[fromStage]}: ${reason}`,
+        null,
+        null
+    );
 });
 </script>
 {% endblock %}

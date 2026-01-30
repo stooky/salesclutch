@@ -10,7 +10,7 @@ from pydantic import BaseModel
 from dotenv import load_dotenv
 
 from app.database import get_db, init_db
-from app.models import Call, User, Workspace, WorkspaceMember, Deal, DealStage, DealStageChange, DealStageOverride
+from app.models import Call, User, Workspace, WorkspaceMember, Deal, DealStage, DealStageChange, DealStageOverride, DealSendBack
 from app.config import config
 from app.services.storage import save_upload, cleanup_upload
 from app.services.transcription import get_transcript
@@ -68,6 +68,7 @@ class UpdateDealRequest(BaseModel):
     justification: Optional[str] = None  # For manual stage changes
     trigger_call_id: Optional[int] = None  # Call that justifies the stage change
     skipped_stages: Optional[list[SkippedStageExplanation]] = None  # Explanations for skipped stages
+    send_back_reason: Optional[str] = None  # Reason for sending deal back to earlier stage
 
 
 # Auth dependency
@@ -253,6 +254,22 @@ async def index(
     session_token: Optional[str] = Cookie(None),
     db: DBSession = Depends(get_db)
 ):
+    """Redirect to deals pipeline as the default view."""
+    user = await get_current_user(request, session_token, db)
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    # Redirect to deals pipeline
+    return RedirectResponse(url="/deals", status_code=303)
+
+
+@app.get("/upload", response_class=HTMLResponse)
+async def upload_page(
+    request: Request,
+    session_token: Optional[str] = Cookie(None),
+    db: DBSession = Depends(get_db)
+):
+    """Standalone upload page for processing calls without a deal."""
     user = await get_current_user(request, session_token, db)
     if not user:
         return RedirectResponse(url="/login", status_code=303)
@@ -738,6 +755,11 @@ async def deal_timeline(
         DealStageOverride.deal_id == deal_id
     ).order_by(DealStageOverride.created_at.desc()).all()
 
+    # Get send-backs
+    send_backs = db.query(DealSendBack).filter(
+        DealSendBack.deal_id == deal_id
+    ).order_by(DealSendBack.created_at.desc()).all()
+
     instruction_sets = config.get_all_instruction_sets()
 
     return templates.TemplateResponse(
@@ -751,6 +773,7 @@ async def deal_timeline(
             "calls": calls,
             "stage_history": stage_history,
             "stage_overrides": stage_overrides,
+            "send_backs": send_backs,
             "instruction_sets": instruction_sets,
             "stage_names": {stage.value: stage.name.replace("_", " ").title() for stage in DealStage}
         }
@@ -835,10 +858,26 @@ async def update_deal(
         if deal_request.stage in [DealStage.CLOSED_WON.value, DealStage.CLOSED_LOST.value]:
             deal.closed_at = datetime.utcnow()
 
-        # Determine trigger type based on whether stages were skipped
+        # Check if this is a send-back (moving backwards in the pipeline)
+        stage_order = [
+            DealStage.LEAD.value,
+            DealStage.DISCOVERY.value,
+            DealStage.DEMO.value,
+            DealStage.NEGOTIATION.value,
+            DealStage.PROPOSAL.value,
+            DealStage.CLOSED_WON.value,
+            DealStage.CLOSED_LOST.value
+        ]
+        old_idx = stage_order.index(old_stage) if old_stage in stage_order else -1
+        new_idx = stage_order.index(deal_request.stage) if deal_request.stage in stage_order else -1
+        is_send_back = new_idx < old_idx and deal_request.stage != DealStage.CLOSED_LOST.value
+
+        # Determine trigger type
         trigger_type = "manual"
         if deal_request.skipped_stages and len(deal_request.skipped_stages) > 0:
             trigger_type = "override"
+        elif is_send_back:
+            trigger_type = "send_back"
 
         # Record the stage change in progression log
         stage_change = DealStageChange(
@@ -864,6 +903,18 @@ async def update_deal(
                     overridden_by=user.id
                 )
                 db.add(override)
+
+        # Record send-back if moving backwards
+        if is_send_back and deal_request.send_back_reason:
+            send_back = DealSendBack(
+                deal_id=deal.id,
+                stage_change_id=stage_change.id,
+                from_stage=old_stage,
+                to_stage=deal_request.stage,
+                reason=deal_request.send_back_reason,
+                sent_back_by=user.id
+            )
+            db.add(send_back)
 
     if deal_request.value is not None:
         deal.value = deal_request.value

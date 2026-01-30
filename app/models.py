@@ -119,6 +119,7 @@ class Deal(Base):
     calls = relationship("Call", back_populates="deal", order_by="Call.sequence_num")
     stage_history = relationship("DealStageChange", back_populates="deal", order_by="DealStageChange.changed_at.desc()")
     stage_overrides = relationship("DealStageOverride", back_populates="deal", order_by="DealStageOverride.created_at.desc()")
+    send_backs = relationship("DealSendBack", back_populates="deal", order_by="DealSendBack.created_at.desc()")
 
     __table_args__ = (
         Index("ix_deal_workspace_stage", "workspace_id", "stage"),
@@ -159,6 +160,25 @@ class DealStageOverride(Base):
 
     # Relationships
     deal = relationship("Deal", back_populates="stage_overrides")
+    stage_change = relationship("DealStageChange")
+    user = relationship("User")
+
+
+class DealSendBack(Base):
+    """Tracks when deals are sent back to earlier stages - 'Send it Back!!!'"""
+    __tablename__ = "deal_send_backs"
+
+    id = Column(Integer, primary_key=True, index=True)
+    deal_id = Column(Integer, ForeignKey("deals.id"), nullable=False, index=True)
+    stage_change_id = Column(Integer, ForeignKey("deal_stage_changes.id"), nullable=True)  # Links to the stage change
+    from_stage = Column(String(20), nullable=False)  # Where it was
+    to_stage = Column(String(20), nullable=False)  # Where it went back to
+    reason = Column(Text, nullable=False)  # Why it was sent back
+    sent_back_by = Column(Integer, ForeignKey("users.id"), nullable=False)
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+
+    # Relationships
+    deal = relationship("Deal", back_populates="send_backs")
     stage_change = relationship("DealStageChange")
     user = relationship("User")
 
